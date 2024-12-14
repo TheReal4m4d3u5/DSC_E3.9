@@ -11,7 +11,7 @@ Postgres Shell is an advanced client and code editor for Postgres located right 
 * Next, we open the Postgres Shell that connects the terminal to the Postgres instance. In the terminal, at the root directory of the project, enter the following command:
 
   ```sh
-  psql -U postgres
+psql -U postgres
   ```
 
 * This command tells the Postgres Shell that we want to log in with the root user (-U). Once we enter this command, we are prompted to enter the password we created when we installed `PostgreSQL`.
@@ -25,7 +25,7 @@ Postgres Shell is an advanced client and code editor for Postgres located right 
 * We can also execute a file that contains a list of commands using `\i <FILENAME>`
 
   ```sh
-  \i schema.sql
+\i schema.sql
   ```
 
 * To exit the Shell, we type `\q`.

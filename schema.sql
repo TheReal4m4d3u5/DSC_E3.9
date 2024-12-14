@@ -1,112 +1,129 @@
--- Drop tables if they exist
-DROP TABLE IF EXISTS depositor;
-DROP TABLE IF EXISTS account;
-DROP TABLE IF EXISTS borrower;
-DROP TABLE IF EXISTS loan;
-DROP TABLE IF EXISTS customer;
-DROP TABLE IF EXISTS branch;
+DROP TABLE IF EXISTS manages;
+DROP TABLE IF EXISTS works;
+DROP TABLE IF EXISTS company;
+DROP TABLE IF EXISTS employee;
 
--- Create branch table
-CREATE TABLE branch (
-    branch_name VARCHAR(50) PRIMARY KEY,
-    branch_city VARCHAR(50),
-    assets DECIMAL(15, 2)
+
+CREATE TABLE IF NOT EXISTS employee (
+    employee_name VARCHAR(50) PRIMARY KEY,
+    street VARCHAR(100),
+    city VARCHAR(50)
 );
 
-INSERT INTO branch VALUES ('Downtown', 'New York', 1000000.00);
-INSERT INTO branch VALUES ('Uptown', 'Los Angeles', 500000.00);
-INSERT INTO branch VALUES ('Suburbia', 'Harrison', 750000.00);
 
--- Create customer table
-CREATE TABLE customer (
-    customer_name VARCHAR(50) PRIMARY KEY,
-    customer_street VARCHAR(50),
-    customer_city VARCHAR(50)
+CREATE TABLE IF NOT EXISTS works (
+    employee_name VARCHAR(50),
+    company_name VARCHAR(50),
+    salary DECIMAL(10, 2),
+    PRIMARY KEY (employee_name, company_name),
+    FOREIGN KEY (employee_name) REFERENCES employee(employee_name)
 );
 
-INSERT INTO customer VALUES ('Smith', 'Main St', 'New York');
-INSERT INTO customer VALUES ('Johnson', 'Pine St', 'Los Angeles');
-INSERT INTO customer VALUES ('Williams', 'Oak St', 'Harrison');
-INSERT INTO customer VALUES ('Brown', 'Maple St', 'New York');
-INSERT INTO customer VALUES ('Miller', 'Pine St', 'Harrison');  -- Added Miller here
 
--- Create loan table
-CREATE TABLE loan (
-    loan_number VARCHAR(20) PRIMARY KEY,
-    branch_name VARCHAR(50),
-    amount DECIMAL(15, 2),
-    FOREIGN KEY (branch_name) REFERENCES branch(branch_name)
+CREATE TABLE IF NOT EXISTS company (
+    company_name VARCHAR(50) PRIMARY KEY,
+    city VARCHAR(50)
 );
 
-INSERT INTO loan VALUES ('L1', 'Downtown', 5000.00);
-INSERT INTO loan VALUES ('L2', 'Uptown', 3000.00);
 
--- Create borrower table
-CREATE TABLE borrower (
-    customer_name VARCHAR(50),
-    loan_number VARCHAR(20),
-    PRIMARY KEY (customer_name, loan_number),
-    FOREIGN KEY (customer_name) REFERENCES customer(customer_name),
-    FOREIGN KEY (loan_number) REFERENCES loan(loan_number)
+CREATE TABLE IF NOT EXISTS manages (
+    employee_name VARCHAR(50),
+    manager_name VARCHAR(50),
+    PRIMARY KEY (employee_name, manager_name),
+    FOREIGN KEY (employee_name) REFERENCES employee(employee_name),
+    FOREIGN KEY (manager_name) REFERENCES employee(employee_name)
 );
 
-INSERT INTO borrower VALUES ('Smith', 'L1');
-INSERT INTO borrower VALUES ('Miller', 'L2');  -- Miller exists now
 
--- Create account table
-CREATE TABLE account (
-    account_number VARCHAR(20) PRIMARY KEY,
-    branch_name VARCHAR(50),
-    balance DECIMAL(15, 2),
-    FOREIGN KEY (branch_name) REFERENCES branch(branch_name)
+TRUNCATE TABLE manages, works, company, employee CASCADE;
+
+
+INSERT INTO employee (employee_name, street, city) VALUES
+('Alice', '123 Main St', 'New York'),
+('Bob', '456 Maple Ave', 'Los Angeles'),
+('Charlie', '789 Oak St', 'Chicago'),
+('David', '321 Pine Rd', 'New York'),
+('Eve', '654 Elm St', 'San Francisco'),
+('Frank', '987 Cedar St', 'Chicago');
+
+
+INSERT INTO works (employee_name, company_name, salary) VALUES
+('Alice', 'First Bank Corporation', 12000.00),
+('Bob', 'Small Bank Corporation', 9000.00),
+('Charlie', 'First Bank Corporation', 15000.00),
+('David', 'First Bank Corporation', 9500.00),
+('Eve', 'Small Bank Corporation', 11000.00),
+('Frank', 'Big Tech Inc', 13000.00);
+
+
+INSERT INTO company (company_name, city) VALUES
+('First Bank Corporation', 'New York'),
+('Small Bank Corporation', 'Los Angeles'),
+('Big Tech Inc', 'Chicago');
+
+
+INSERT INTO manages (employee_name, manager_name) VALUES
+('Alice', 'Charlie'),
+('Bob', 'Eve'),
+('Charlie', 'Alice'),
+('David', 'Charlie'),
+('Eve', 'Bob');
+
+
+
+
+-- a) Find the names and cities of residence of all employees who work for 'First Bank Corporation'.
+SELECT e.employee_name, e.city
+FROM employee e
+JOIN works w ON e.employee_name = w.employee_name
+WHERE w.company_name = 'First Bank Corporation';
+
+-- b) Find the names, street addresses, and cities of residence of all employees who work for 'First Bank Corporation' and earn more than $10,000.
+SELECT e.employee_name, e.street, e.city
+FROM employee e
+JOIN works w ON e.employee_name = w.employee_name
+WHERE w.company_name = 'First Bank Corporation' AND w.salary > 10000;
+
+-- c) Find all employees in the database who live in the same city as the company 'Small Bank Corporation'.
+SELECT e.employee_name
+FROM employee e
+WHERE e.city = (
+    SELECT c.city
+    FROM company c
+    WHERE c.company_name = 'Small Bank Corporation'
 );
 
-INSERT INTO account VALUES ('A1', 'Downtown', 2000.00);
-INSERT INTO account VALUES ('A2', 'Suburbia', 1500.00);
-INSERT INTO account VALUES ('A3', 'Uptown', 3000.00);
-INSERT INTO account VALUES ('A4', 'Suburbia', 3000.00);
-
--- Create depositor table
-CREATE TABLE depositor (
-    customer_name VARCHAR(50),
-    account_number VARCHAR(20),
-    PRIMARY KEY (customer_name, account_number),
-    FOREIGN KEY (customer_name) REFERENCES customer(customer_name),
-    FOREIGN KEY (account_number) REFERENCES account(account_number)
+-- d) Find all employees in the database who do not work for 'First Bank Corporation'.
+SELECT e.employee_name
+FROM employee e
+WHERE e.employee_name NOT IN (
+    SELECT w.employee_name
+    FROM works w
+    WHERE w.company_name = 'First Bank Corporation'
 );
 
-INSERT INTO depositor VALUES ('Smith', 'A1');
-INSERT INTO depositor VALUES ('Williams', 'A2');
-INSERT INTO depositor VALUES ('Brown', 'A3');
-INSERT INTO depositor VALUES ('Johnson', 'A4');
-
-
---  a. Find all customers of the bank who have an account but not a loan.
-SELECT DISTINCT d.customer_name
-FROM depositor d
-WHERE d.customer_name NOT IN (
-    SELECT b.customer_name
-    FROM borrower b
+-- e) Assume that the companies may be located in several cities. Find all employees who earn more than each employee of 'Small Bank Corporation'.
+SELECT e.employee_name
+FROM works e
+WHERE e.salary > ALL (
+    SELECT w.salary
+    FROM works w
+    WHERE w.company_name = 'Small Bank Corporation'
 );
 
--- b. Find the names of all customers who live on the same street and in the same city as “Smith”.
-SELECT DISTINCT c.customer_name
-FROM customer c
-WHERE c.customer_street = (
-    SELECT customer_street
-    FROM customer
-    WHERE customer_name = 'Smith'
-)
-AND c.customer_city = (
-    SELECT customer_city
-    FROM customer
-    WHERE customer_name = 'Smith'
-)
-AND c.customer_name != 'Smith';
+-- f) Find the company that has the most employees.
+SELECT w.company_name
+FROM works w
+GROUP BY w.company_name
+ORDER BY COUNT(*) DESC
+LIMIT 1;
 
--- c. Find the names of all branches with customers who have an account in the bank and who live in “Harrison”.
-SELECT DISTINCT a.branch_name
-FROM account a
-JOIN depositor d ON a.account_number = d.account_number
-JOIN customer c ON d.customer_name = c.customer_name
-WHERE c.customer_city = 'Harrison';
+-- g) Find those companies whose employees earn a higher salary, on average, than the average salary at 'First Bank Corporation'.
+SELECT w.company_name
+FROM works w
+GROUP BY w.company_name
+HAVING AVG(w.salary) > (
+    SELECT AVG(w.salary)
+    FROM works w
+    WHERE w.company_name = 'First Bank Corporation'
+);
