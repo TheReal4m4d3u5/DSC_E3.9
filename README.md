@@ -22,3 +22,5 @@ f. Find the company that has the most employees.
 g. Find those companies whose employees earn a higher salary, on average, than the average salary at 'First Bank Corporation'.
 
 ![alt text](image.png)
+
+![alt text](image-1.png)
